@@ -3,10 +3,14 @@
 public class GamesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ICategoriesService _categoriesService;
+    private readonly IDevicesService _devicesService;
 
-    public GamesController(ApplicationDbContext context)
+    public GamesController(ApplicationDbContext context, ICategoriesService categoriesService, IDevicesService devicesService)
     {
         _context = context;
+        _categoriesService = categoriesService;
+        _devicesService = devicesService;
     }
 
     public IActionResult Index()
@@ -18,16 +22,27 @@ public class GamesController : Controller
     {
         CreateGameFormViewModel viewModel = new()
         {
-            Categories = _context.Categories
-            .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Name })
-            .OrderBy(c=>c.Text)
-            .ToList(),
-            Devices = _context.Devices
-            .Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name })
-            .OrderBy(d => d.Text)
-            .ToList(),
+            Categories = _categoriesService.GetSelectList(),
+            Devices = _devicesService.GetSelectList(),
         };
 
         return View(viewModel);
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Create(CreateGameFormViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            model.Categories = _categoriesService.GetSelectList();
+            model.Devices = _devicesService.GetSelectList();
+
+            return View(model);
+        }
+
+        // Save game to database
+        // Save cover to server
+
+        return RedirectToAction(nameof(Index));
     }
 }
