@@ -16,6 +16,7 @@ public class CreateGameFormViewModel
     public IEnumerable<SelectListItem> Devices { get; set; } = Enumerable.Empty<SelectListItem>();
     [MaxLength(2500)]
     public string Description { get; set; } = string.Empty;
-    [AllowedExtensions(FileSettings.AllowedExtensions)]
+    [AllowedExtensions(FileSettings.AllowedExtensions),
+        MaxFileSize(FileSettings.MaxFileSizeInBytes)]
     public IFormFile Cover { get; set; } = default!;
 }
