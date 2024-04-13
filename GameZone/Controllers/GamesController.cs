@@ -17,7 +17,8 @@ public class GamesController : Controller
 
     public IActionResult Index()
     {
-        return View();
+        var games = _gamesService.GetAll();
+        return View(games);
     }
     [HttpGet]
     public IActionResult Create()
