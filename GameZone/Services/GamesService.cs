@@ -16,9 +16,9 @@ public class GamesService : IGamesService
     public IEnumerable<Game> GetAll()
     {
         return _context.Games
-            .Include(g=>g.Category)
-            .Include(g=>g.Devices)
-                .ThenInclude(d=>d.Device)
+            .Include(g => g.Category)
+            .Include(g => g.Devices)
+                .ThenInclude(d => d.Device)
             .AsNoTracking()
             .ToList();
     }
@@ -33,12 +33,7 @@ public class GamesService : IGamesService
     }
     public async Task Create(CreateGameFormViewModel model)
     {
-        var coverName = $"{Guid.NewGuid()}{Path.GetExtension(model.Cover.FileName)}";
-
-        var path = Path.Combine(_imagesPath, coverName);
-
-        using var stream = File.Create(path);
-        await model.Cover.CopyToAsync(stream);
+        var coverName = await SaveCover(model.Cover);
 
         Game game = new()
         {
@@ -51,5 +46,61 @@ public class GamesService : IGamesService
 
         _context.Add(game);
         _context.SaveChanges();
+    }
+
+    public async Task<Game?> Update(EditGameFormViewModel model)
+    {
+        var game = _context.Games
+            .Include(g => g.Devices)
+            .SingleOrDefault(g => g.Id == model.Id);
+
+        if (game is null)
+            return null;
+
+        var hasNewCover = model.Cover is not null;
+        var currentCover = game.Cover;
+
+        game.Name = model.Name;
+        game.Description = model.Description;
+        game.CategoryId = model.CategoryId;
+        game.Devices = model.SelectedDevices.Select(d => new GameDevice { DeviceId = d }).ToList();
+
+        if (hasNewCover)
+        {
+            game.Cover = await SaveCover(model.Cover!);
+        }
+
+        var effectedRows = _context.SaveChanges();
+
+        if (effectedRows > 0)
+        {
+            if (hasNewCover)
+            {
+                var cover = Path.Combine(_imagesPath, currentCover);
+                File.Delete(cover);
+            }
+
+            return game;
+        }
+        else
+        {
+            if (hasNewCover)
+            {
+                var cover = Path.Combine(_imagesPath, game.Cover);
+                File.Delete(cover);
+            }
+            return null;
+        }
+    }
+    private async Task<string> SaveCover(IFormFile cover)
+    {
+        var coverName = $"{Guid.NewGuid()}{Path.GetExtension(cover.FileName)}";
+
+        var path = Path.Combine(_imagesPath, coverName);
+
+        using var stream = File.Create(path);
+        await cover.CopyToAsync(stream);
+
+        return coverName;
     }
 }
